@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/js-md4@0.7.0/build/md4.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD5 Chatroom CTF</title>
+    <style>
+        body {
+            background-color: #000000;
+            color: #00ff00;
+            font-family: 'Press Start 2P', monospace; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        .chat-container {
+            width: 60%;
+            max-width: 800px;
+            background-color: rgba(10, 10, 10, 0.9);
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 15px #00ff00, 0 0 30px #00ff00, 0 0 45px #00ff00;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-window {
+            height: 300px;
+            overflow-y: auto;
+            background-color: #101010;
+            border-radius: 5px;
+            padding: 15px;
+            color: #00ff00;
+            font-size: 14px;
+            margin-bottom: 20px;
+            border: 1px solid #00ff00;
+            box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.2);
+            animation: flicker 1.5s infinite alternate;
+        }
+
+        @keyframes flicker {
+            0% { box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.4); }
+            100% { box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.6); }
+        }
+
+        .typing {
+            width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid;
+            animation: typing 3.5s steps(40, end) forwards, blink 1s infinite step-end alternate;
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @keyframes blink {
+            50% { border-color: transparent; }
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            color: #00ff00;
+            background-color: #000;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #00ff00;
+            caret-color: #00ff00;
+        }
+
+        .send-button {
+            background-color: #000;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            display: block;
+            width: 100%;
+            text-transform: uppercase;
+        }
+
+        .send-button:hover {
+            background-color: #00ff00;
+            color: #000;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        .dots {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: #00ff00;
+            border-radius: 50%;
+            margin: 2px;
+            opacity: 0.5;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0); }
+        }
+
+        .lock-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 10;
+            color: #00ff00;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .lock-screen h1 {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .md4-input {
+            padding: 10px;
+            font-size: 16px;
+            width: 80%;
+            max-width: 300px;
+            color: #00ff00;
+            background-color: #000;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+        }
+
+        .unlock-button {
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 16px;
+            color: #00ff00;
+            background-color: #000;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .unlock-button:hover {
+            background-color: #00ff00;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-window" id="chat-window">
+            <div class="typing">System: Welcome to the MD5 Chatroom. Speak only in MD5! (5 Chances)</div>
+        </div>
+        <input type="text" class="chat-input" id="chat-input" placeholder="Enter MD5 hash..." />
+        <button class="send-button" onclick="sendMessage()">Send</button>
+        <div class="dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+
+
+    <script>
+        const flagHash = "a2c03bbf688f41cc4d5be1f2268ad0f6";  // MD5 of "digital"
+        const helloHash = "5d41402abc4b2a76b9719d911017c592"; // MD5 of "hello"
+        const hiHash = "31cf74bc541d795a660a3065c311fcbf"; // MD5 of "hi"
+        const howAreYouHash = "91ea1245f20d46ae9a3f22f5a8e9f1e5"; // MD5 of "how are you"
+        const isdfHash = "47333b17e6245254bfce5afcd30ef39e"; // MD5 of "ISDF"
+        let attempts = 0;
+        let hintsGiven = 0;
+        let randomMd4Hash = "";
+        let generatedString = "";
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input').value.trim();
+            const chatWindow = document.getElementById('chat-window');
+
+            if (!input || attempts >= 5) return;
+
+            attempts++;
+            const userMessage = document.createElement('div');
+            userMessage.textContent = `You: ${input}`;
+            chatWindow.appendChild(userMessage);
+
+            setTimeout(() => {
+                let responseMessage = "";
+
+                switch (input) {
+                    case helloHash:
+                        responseMessage = "System : Hello!";
+                        break;
+                    case hiHash:
+                        responseMessage = "System : Hie";
+                        break;
+                    case howAreYouHash:
+                        responseMessage = "System: I am fine.";
+                        break;
+                    case flagHash:
+                        responseMessage = "System: Flag: H&SCTF{h0p3_y0u_l1k3d_1t}";
+                        attempts = 5; // Lock after flag
+                        break;
+                    case isdfHash:
+                        responseMessage = "System: Good. Hint 2 - The answer is in its name itself...";
+                        break;
+                    default:
+                        if (hintsGiven === 0 && attempts >= 2) {
+                            responseMessage = "System: Guess about this :Hint 1 - Best club of AIT?";
+                            hintsGiven++;
+                        } else {
+                            responseMessage = "System: Invalid MD5, try again!";
+                        }
+                        break;
+                }
+
+                const botMessage = document.createElement('div');
+                botMessage.textContent = responseMessage;
+                chatWindow.appendChild(botMessage);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+
+                
+            }, 500);
+
+            document.getElementById('chat-input').value = '';
+        }
+
+        
+
+      
+
+        // Prevent right-click and F12
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
